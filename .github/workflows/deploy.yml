@@ -1,0 +1,15 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main, dev]
+
+jobs:
+  deploy:
+    uses: AtlasReaper311/atlas-infra/.github/workflows/deploy-worker.yml@main
+    with:
+      worker_name: specular-edge
+      working_directory: worker
+      run_lint: true
+      run_tests: false
+    secrets: inherit
