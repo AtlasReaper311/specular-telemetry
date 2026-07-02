@@ -1,0 +1,63 @@
+# CI gate for specular-telemetry: syntax-check the local service,
+# parse-check the Worker as an ES module, report to #ci-cd via direct
+# curl. Deploying specular-edge itself goes through the reusable
+# deploy-worker.yml caller (see README, Setup), kept separate so a
+# Python-only change never redeploys the edge.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Syntax-check the local service
+        run: python -m compileall local
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Parse-check the Worker (ES modules)
+        run: |
+          for f in worker/src/*.js; do
+            echo "checking $f"
+            node --input-type=module --check < "$f"
+          done
+
+      - name: Notify #ci-cd
+        if: always()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CICD_WEBHOOK }}
+          STATUS: ${{ job.status }}
+        run: |
+          [ -z "$WEBHOOK" ] && echo "no webhook secret; skipping" && exit 0
+          if [ "$STATUS" = "success" ]; then COLOUR=4906624; ICON="🟢"; else COLOUR=14830410; ICON="🔴"; fi
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          PAYLOAD=$(jq -n \
+            --arg icon "$ICON" \
+            --arg status "$STATUS" \
+            --arg run_url "$RUN_URL" \
+            --argjson colour "$COLOUR" \
+            '{
+              username: "ci-cd",
+              embeds: [{
+                title: "specular-telemetry CI",
+                description: ($icon + " compileall + worker parse-check: " + $status),
+                color: $colour,
+                fields: [{name: "Run", value: ("[logs](" + $run_url + ")"), inline: true}],
+                footer: {text: "Atlas Systems — Pipeline"}
+              }]
+            }')
+          curl -sS -X POST "$WEBHOOK" -H "Content-Type: application/json" -d "$PAYLOAD"

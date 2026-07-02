@@ -1,0 +1,4 @@
+# Local dev overrides for `npx wrangler dev`. Copy to .dev.vars.
+# Point the edge at the local service directly, no tunnel needed.
+TUNNEL_ORIGIN=http://localhost:9000
+ALLOWED_ORIGINS=http://localhost:8788,http://127.0.0.1:8788

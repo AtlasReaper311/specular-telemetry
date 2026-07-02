@@ -1,0 +1,317 @@
+<!--
+  specular-widget.html
+  Self-contained live telemetry panel for atlas-systems.uk.
+
+  Drop this whole block into any page (the Lab page is the intended
+  home). It inherits the site's CSS custom properties and fonts when
+  present and carries hex fallbacks so it renders correctly anywhere.
+  No dependencies, no globals leaked: one IIFE, styles scoped under
+  .sp-w, DOM filled via textContent only.
+-->
+<section class="sp-w" id="specular-widget" aria-label="SPECULAR-CORE live telemetry">
+  <style>
+    .sp-w {
+      --spw-bg: var(--bg-1, #111118);
+      --spw-bg-2: var(--bg-2, #1a1a24);
+      --spw-border: var(--border, rgba(255, 255, 255, 0.08));
+      --spw-text: var(--text, #e8e8e0);
+      --spw-dim: var(--text-dim, #aaa9a0);
+      --spw-faint: var(--text-faint, #555560);
+      --spw-accent: var(--accent, #f5a623);
+      --spw-green: #4ade80;
+      --spw-red: #e24b4a;
+      display: block;
+      background: var(--spw-bg);
+      border: 1px solid var(--spw-border);
+      border-radius: 6px;
+      padding: 20px;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--spw-text);
+      max-width: 720px;
+    }
+    .sp-w * { box-sizing: border-box; }
+    .sp-w-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .sp-w-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--spw-faint);
+      align-self: center;
+      flex: none;
+    }
+    .sp-w[data-state="online"] .sp-w-dot { background: var(--spw-green); }
+    .sp-w[data-state="offline"] .sp-w-dot { background: var(--spw-red); }
+    @media (prefers-reduced-motion: no-preference) {
+      .sp-w[data-state="online"] .sp-w-dot { animation: sp-w-pulse 2.4s ease-in-out infinite; }
+      @keyframes sp-w-pulse { 50% { opacity: 0.35; } }
+    }
+    .sp-w-name { font-weight: 500; letter-spacing: 0.04em; }
+    .sp-w-label { color: var(--spw-faint); }
+    .sp-w-age { margin-left: auto; color: var(--spw-faint); font-size: 12px; }
+    .sp-w-offline {
+      display: none;
+      border: 1px solid var(--spw-border);
+      border-left: 2px solid var(--spw-red);
+      background: var(--spw-bg-2);
+      color: var(--spw-dim);
+      padding: 10px 12px;
+      margin-bottom: 16px;
+    }
+    .sp-w[data-state="offline"] .sp-w-offline { display: block; }
+    .sp-w[data-state="offline"] .sp-w-grid { opacity: 0.45; }
+    .sp-w-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .sp-w-tile {
+      background: var(--spw-bg-2);
+      border: 1px solid var(--spw-border);
+      border-radius: 4px;
+      padding: 12px;
+      min-width: 0;
+    }
+    .sp-w-tile h4 {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--spw-faint);
+      text-transform: uppercase;
+    }
+    .sp-w-big { font-size: 18px; color: var(--spw-text); }
+    .sp-w-sub { font-size: 12px; color: var(--spw-dim); overflow-wrap: anywhere; }
+    .sp-w-bar {
+      height: 6px;
+      background: var(--spw-bg);
+      border: 1px solid var(--spw-border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 8px 0 6px;
+    }
+    .sp-w-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--spw-accent);
+      transition: width 0.6s ease;
+    }
+    /* The signature: one thin meter per logical core. Structure as
+       information; the strip's width is literally the core count. */
+    .sp-w-cores {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      height: 26px;
+      margin-top: 8px;
+    }
+    .sp-w-core {
+      flex: 1 1 0;
+      min-width: 2px;
+      height: 100%;
+      background: var(--spw-bg);
+      border: 1px solid var(--spw-border);
+      position: relative;
+      overflow: hidden;
+    }
+    .sp-w-core i {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 4%;
+      background: var(--spw-accent);
+      transition: height 0.6s ease;
+    }
+    .sp-w-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .sp-w-chip {
+      border: 1px solid var(--spw-border);
+      background: rgba(245, 166, 35, 0.12);
+      color: var(--spw-text);
+      padding: 1px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    .sp-w-foot {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      font-size: 11px;
+      color: var(--spw-faint);
+    }
+    .sp-w-foot a { color: var(--spw-faint); text-decoration: underline; }
+    .sp-w-foot a:hover { color: var(--spw-accent); }
+  </style>
+
+  <div class="sp-w-head">
+    <span class="sp-w-dot" aria-hidden="true"></span>
+    <span class="sp-w-name" id="spw-host">SPECULAR-CORE</span>
+    <span class="sp-w-label">// live telemetry</span>
+    <span class="sp-w-age" id="spw-age" aria-live="polite">connecting…</span>
+  </div>
+
+  <p class="sp-w-offline" id="spw-offline"></p>
+
+  <div class="sp-w-grid">
+    <div class="sp-w-tile">
+      <h4>GPU</h4>
+      <div class="sp-w-big"><span id="spw-gpu-util">–</span>%</div>
+      <div class="sp-w-bar"><div class="sp-w-fill" id="spw-vram-fill"></div></div>
+      <div class="sp-w-sub" id="spw-vram">VRAM –</div>
+      <div class="sp-w-sub" id="spw-gpu-line">–</div>
+    </div>
+    <div class="sp-w-tile">
+      <h4>CPU</h4>
+      <div class="sp-w-big"><span id="spw-cpu">–</span>%</div>
+      <div class="sp-w-cores" id="spw-cores" aria-hidden="true"></div>
+      <div class="sp-w-sub" id="spw-cpu-line">–</div>
+    </div>
+    <div class="sp-w-tile">
+      <h4>RAM</h4>
+      <div class="sp-w-big"><span id="spw-ram">–</span>%</div>
+      <div class="sp-w-bar"><div class="sp-w-fill" id="spw-ram-fill"></div></div>
+      <div class="sp-w-sub" id="spw-ram-line">–</div>
+    </div>
+    <div class="sp-w-tile">
+      <h4>Ollama</h4>
+      <div class="sp-w-sub" id="spw-ollama-line">–</div>
+      <div class="sp-w-chips" id="spw-models"></div>
+    </div>
+  </div>
+
+  <div class="sp-w-foot">
+    <span id="spw-uptime"></span>
+    <span id="spw-platform"></span>
+    <a href="https://api.atlas-systems.uk/specular">api.atlas-systems.uk/specular</a>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+      var ENDPOINT = "https://api.atlas-systems.uk/specular";
+      var POLL_MS = 60000;
+      var root = document.getElementById("specular-widget");
+      var el = function (id) { return document.getElementById(id); };
+      var sampledAt = null;
+
+      function text(id, value) { el(id).textContent = value; }
+
+      function uptimeHuman(seconds) {
+        var d = Math.floor(seconds / 86400);
+        var h = Math.floor((seconds % 86400) / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        return "up " + (d ? d + "d " : "") + h + "h " + m + "m";
+      }
+
+      function renderCores(perCore) {
+        var strip = el("spw-cores");
+        while (strip.children.length < perCore.length) {
+          var bar = document.createElement("span");
+          bar.className = "sp-w-core";
+          bar.appendChild(document.createElement("i"));
+          strip.appendChild(bar);
+        }
+        for (var i = 0; i < perCore.length; i++) {
+          strip.children[i].firstChild.style.height =
+            Math.max(4, Math.min(100, perCore[i])) + "%";
+        }
+      }
+
+      function renderModels(loaded) {
+        var wrap = el("spw-models");
+        while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+        loaded.forEach(function (model) {
+          var chip = document.createElement("span");
+          chip.className = "sp-w-chip";
+          chip.textContent = model.name;
+          wrap.appendChild(chip);
+        });
+      }
+
+      function render(payload) {
+        root.dataset.state = payload.online ? "online" : "offline";
+        var t = payload.telemetry;
+        if (payload.online) {
+          sampledAt = Date.parse(t.sampled_at);
+        } else {
+          sampledAt = null;
+          var seen = payload.last_seen
+            ? new Date(payload.last_seen).toLocaleString()
+            : "never";
+          text("spw-offline", "SPECULAR-CORE is offline. Last seen " + seen +
+            (t ? "; showing the last reported snapshot." : "."));
+          text("spw-age", "offline");
+        }
+        if (!t) return;
+
+        text("spw-host", t.host.hostname || "SPECULAR-CORE");
+        text("spw-uptime", payload.online ? uptimeHuman(t.host.uptime_s) : "");
+        text("spw-platform", t.host.platform || "");
+
+        if (t.gpu) {
+          text("spw-gpu-util", t.gpu.utilisation_pct);
+          var vramPct = t.gpu.vram_total_mb
+            ? (100 * t.gpu.vram_used_mb) / t.gpu.vram_total_mb : 0;
+          el("spw-vram-fill").style.width = vramPct.toFixed(0) + "%";
+          text("spw-vram", "VRAM " +
+            (t.gpu.vram_used_mb / 1024).toFixed(1) + " / " +
+            (t.gpu.vram_total_mb / 1024).toFixed(1) + " GB");
+          text("spw-gpu-line", t.gpu.name + " · " + t.gpu.temperature_c + "°C");
+        } else {
+          text("spw-gpu-util", "–");
+          text("spw-gpu-line", "no NVIDIA stats");
+        }
+
+        text("spw-cpu", Math.round(t.cpu.overall_pct));
+        renderCores(t.cpu.per_core_pct || []);
+        text("spw-cpu-line",
+          t.cpu.cores.logical + " threads" +
+          (t.cpu.freq_mhz.current ? " · " + (t.cpu.freq_mhz.current / 1000).toFixed(1) + " GHz" : ""));
+
+        text("spw-ram", Math.round(t.ram.pct));
+        el("spw-ram-fill").style.width = t.ram.pct.toFixed(0) + "%";
+        text("spw-ram-line", t.ram.used_gb + " / " + t.ram.total_gb + " GB");
+
+        if (t.ollama.reachable) {
+          text("spw-ollama-line",
+            t.ollama.loaded.length
+              ? t.ollama.loaded.length + " loaded · " + t.ollama.available.length + " available"
+              : "idle · " + t.ollama.available.length + " models available");
+          renderModels(t.ollama.loaded);
+        } else {
+          text("spw-ollama-line", "not running");
+          renderModels([]);
+        }
+      }
+
+      function tickAge() {
+        if (sampledAt === null) return;
+        var age = Math.max(0, Math.round((Date.now() - sampledAt) / 1000));
+        text("spw-age", "sampled " + age + "s ago");
+      }
+
+      function refresh() {
+        fetch(ENDPOINT)
+          .then(function (response) { return response.json(); })
+          .then(render)
+          .catch(function () {
+            root.dataset.state = "offline";
+            text("spw-offline", "Telemetry endpoint unreachable from this browser.");
+            text("spw-age", "offline");
+          });
+      }
+
+      refresh();
+      setInterval(refresh, POLL_MS);
+      setInterval(tickAge, 5000);
+      document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) refresh();
+      });
+    })();
+  </script>
+</section>

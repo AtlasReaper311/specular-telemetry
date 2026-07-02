@@ -1,0 +1,14 @@
+# Secrets and local config
+.env
+.dev.vars
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ruff_cache/
+
+# Worker toolchain
+node_modules/
+.wrangler/

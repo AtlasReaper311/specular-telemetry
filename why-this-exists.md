@@ -1,0 +1,11 @@
+# Why this exists
+
+Every portfolio says "I have a homelab." The sentence costs nothing to write, and a senior engineer reading it knows that, so it carries almost no information. A live endpoint reporting the machine's GPU temperature right now is a different class of signal entirely: it cannot be written, only operated. It implies a running service, a survivable install (boot, crash, driver update), a tunnel, an edge cache, a CORS policy, and a decision about what happens when the machine is off. The sentence claims; the endpoint proves.
+
+The interesting engineering is in the boring cases. The happy path here is trivial: read psutil, read NVML, serve JSON. What earns the build is everything around it. The GPU library can be missing or wedged after a driver update, so failure latches to `gpu: null` instead of crash-looping. The machine reboots, so both install paths register as boot-started services and the WSL2 venv lives on the native filesystem where symlinks survive. The machine turns off, so the edge keeps a last-known-good snapshot and answers with the same schema and an honest `online: false`.
+
+The free tier shaped the architecture, and that is a feature. Cloudflare KV allows 1,000 writes a day; caching telemetry "in KV for 60 seconds" the obvious way costs 1,440. The fix is not a paid plan, it is reading the pricing model as a design constraint: the Cache API does the high-frequency work for free, and KV does the one job it is uniquely good at here, remembering the last snapshot across the whole edge, written only when the state actually changes or goes stale. Budget limits are requirements wearing a different hat.
+
+Publishing hardware stats is also a small, deliberate act of transparency. The numbers are unglamorous: VRAM mostly idle, a CPU doing nothing at 3am. That is the point. Real infrastructure is mostly quiet, and showing the quiet honestly reads as more credible than any curated screenshot of a busy dashboard.
+
+The transferable principle: a system's degraded state deserves the same design attention as its healthy state, because consumers experience the contract, not the implementation, and a contract that holds when the backend is gone is what lets everything downstream stay simple.
