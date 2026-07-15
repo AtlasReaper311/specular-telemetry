@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test"
   },
   "devDependencies": {
     "eslint": "^9.17.0",
