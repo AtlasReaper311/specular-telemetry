@@ -4,6 +4,13 @@ on:
   push:
     branches: [main, dev]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-specular-edge-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     uses: AtlasReaper311/atlas-infra/.github/workflows/deploy-worker.yml@main
@@ -11,5 +18,5 @@ jobs:
       worker_name: specular-edge
       working_directory: worker
       run_lint: true
-      run_tests: false
+      run_tests: true
     secrets: inherit

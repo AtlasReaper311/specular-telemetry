@@ -1,14 +1,7 @@
 # specular-edge // Cloudflare Worker configuration
-#
-# Serves api.atlas-systems.uk/specular* through the same api hostname
-# as the rest of the estate. This route is more specific than
-# atlas-notify's /* wildcard, and Cloudflare resolves to the most
-# specific matching route, so this Worker correctly owns the path.
 name = "specular-edge"
 main = "src/index.js"
 compatibility_date = "2026-06-01"
-# No workers.dev subdomain: reachable only on the routed production
-# hostname, one URL to reason about.
 workers_dev = false
 
 routes = [
@@ -18,23 +11,25 @@ routes = [
 [observability]
 enabled = true
 
-# Last-known-good snapshot store. One key, conditionally written (see
-# src/index.js) to stay far under the 1,000 writes/day free cap.
-# Create with:
-#   npx wrangler kv namespace create TELEMETRY_KV
-# Then paste the returned id below.
 [[kv_namespaces]]
 binding = "TELEMETRY_KV"
 id = "3b033fc37ca14e7c9fb1559ecd6430b1"
 
+[[services]]
+binding = "ATLAS_NOTIFY"
+service = "atlas-notify"
+
 [vars]
-# The tunnel's public hostname is configuration, not a secret; anyone
-# can see it in browser devtools the moment the widget loads.
 TUNNEL_ORIGIN = "https://specular-tunnel.atlas-systems.uk"
 ALLOWED_ORIGINS = "https://atlas-systems.uk,https://www.atlas-systems.uk,http://localhost:8788"
 CACHE_TTL_SECONDS = "60"
 OFFLINE_CACHE_TTL_SECONDS = "30"
 KV_MIN_WRITE_INTERVAL_SECONDS = "600"
 TUNNEL_TIMEOUT_MS = "5000"
+# Fail closed. The hidden control route is absent unless the secret binding
+# CHAOS_ENABLED is set to the literal value true for an approved window.
 
-# No secrets: this Worker reads public telemetry and holds no tokens.
+# Secrets, entered only through approved local prompts:
+#   npx wrangler secret put CHAOS_ENABLED
+#   npx wrangler secret put CHAOS_TOKEN
+#   npx wrangler secret put NOTIFY_TOKEN

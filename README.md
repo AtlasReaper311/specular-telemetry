@@ -110,6 +110,14 @@ curl -sS https://api.atlas-systems.uk/specular/_meta
 
 Online response: `{ online: true, fetched_at, last_seen, telemetry: { host, gpu, cpu, ram, ollama, sampled_at } }`. Offline keeps the identical shape with `online: false` and the last snapshot KV remembers, so the widget and any future consumer never branch on schema, only on one boolean.
 
+## Shape-aware anomaly detection
+
+The local sampler now keeps a bounded history for CPU, RAM, GPU utilisation, GPU temperature, and VRAM pressure. Each metric is converted into a feature vector using median/MAD normalisation, slope, volatility, and autocorrelation; a constrained dynamic-time-warping comparison then measures divergence from the learnt baseline shape. A continuity decoder moves through `normal`, `watch`, `warning`, and `critical` states so one bad sample does not become an incident.
+
+`GET /anomaly` exposes the current detector verdict and `GET /anomaly/history` exposes the recent replay window. The edge Worker mirrors both under `/specular/anomaly*`, preserving the same online/offline contract as telemetry. Detector state is persisted locally so a service restart does not erase the baseline.
+
+The Worker's hidden `/specular/__chaos` route is disabled by default. When explicitly enabled, it accepts only a short allowlist of bounded faults, stores one expiring lease, announces activation and rollback through `atlas-notify`, and restores normal behaviour when the lease expires even if the controller disappears.
+
 ## Design notes
 
 **Requests never touch hardware.** A background task samples every 30 seconds into memory; `/telemetry` returns the latest snapshot instantly. A stalled NVML call costs one sample, never a caller, and never the tunnel probe.
