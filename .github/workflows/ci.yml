@@ -29,7 +29,7 @@ jobs:
           python3 -m compileall local
           python3 -m unittest discover -s local/tests -v
 
-      - uses: actions/setup-node@1e60f620b9541dca151540d0c0b2b5d8b244ec70 # v4.0.4
+      - uses: actions/setup-node@v4 # v4.0.4
         with:
           node-version: "22"
           cache: "npm"
