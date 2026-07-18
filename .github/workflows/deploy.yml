@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   deploy:
-    uses: AtlasReaper311/atlas-infra/.github/workflows/deploy-worker.yml@093df3f87fa4e068155455f82c9b69bffad76fb6 # atlas-infra main
+    uses: AtlasReaper311/atlas-infra/.github/workflows/deploy-worker.yml@d870c55c318d519b1e73450d384c8599900c9a0d # atlas-infra main
     with:
       worker_name: specular-edge
       working_directory: worker
