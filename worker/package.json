@@ -9,7 +9,7 @@
     "test": "node --test"
   },
   "devDependencies": {
-    "eslint": "^9.17.0",
+    "eslint": "^10.7.0",
     "wrangler": "^4.112.0"
   }
 }
