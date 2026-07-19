@@ -10,6 +10,6 @@
   },
   "devDependencies": {
     "eslint": "^9.17.0",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.112.0"
   }
 }
