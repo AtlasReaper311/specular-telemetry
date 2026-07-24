@@ -21,7 +21,7 @@ service = "atlas-notify"
 
 [vars]
 TUNNEL_ORIGIN = "https://specular-tunnel.atlas-systems.uk"
-ALLOWED_ORIGINS = "https://atlas-systems.uk,https://www.atlas-systems.uk,http://localhost:8788"
+ALLOWED_ORIGINS = "https://atlas-systems.uk,https://www.atlas-systems.uk,https://status.atlas-systems.uk,http://localhost:8788"
 CACHE_TTL_SECONDS = "60"
 OFFLINE_CACHE_TTL_SECONDS = "30"
 KV_MIN_WRITE_INTERVAL_SECONDS = "600"
