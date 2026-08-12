@@ -12,3 +12,5 @@ venv/
 # Worker toolchain
 node_modules/
 .wrangler/
+
+.DS_Store
